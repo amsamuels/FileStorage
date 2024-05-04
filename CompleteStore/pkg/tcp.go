@@ -15,19 +15,22 @@ type TCPPeer struct {
 	outbound bool
 }
 
-type TCPServer struct {
-	listenAddr    string
-	ln            net.Listener
+type TCPTransportOpts struct {
+	ListenAddr    string
 	HandshakeFunc HandshakeFunc
-
-	decoder Decoder
-
-	messageChan chan Message
-	peers       map[net.Addr]Peer
-	shutdown    chan int
+	Decoder       Decoder
+	shutdown      chan int
 }
 
-type Message struct {
+type TCPServer struct {
+	TCPTransportOpts
+	ln net.Listener
+
+	messageChan chan ProcessMessage
+	peers       map[net.Addr]Peer
+}
+
+type ProcessMessage struct {
 }
 
 func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
@@ -37,11 +40,9 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
-func NewTcp(listenAddr int) *TCPServer {
+func NewTcp(opts TCPTransportOpts) *TCPServer {
 	return &TCPServer{
-		HandshakeFunc: NOPHandshakeFunc,
-		listenAddr:    fmt.Sprintf(":%d", listenAddr),
-		shutdown:      make(chan int),
+		TCPTransportOpts: opts,
 	}
 }
 
@@ -50,7 +51,7 @@ func NewTcp(listenAddr int) *TCPServer {
 func (t *TCPServer) Start() error {
 	var err error
 
-	t.ln, err = net.Listen("tcp", t.listenAddr)
+	t.ln, err = net.Listen("tcp", t.ListenAddr)
 	if err != nil {
 		return fmt.Errorf("hehe")
 	}
@@ -77,26 +78,20 @@ func (t *TCPServer) handelConn(conn net.Conn) {
 
 	peer := NewTCPPeer(conn, true)
 
-	if err := t.HandshakeFunc(conn); err != nil {
+	if err := t.HandshakeFunc(peer); err != nil {
+		conn.Close()
 		fmt.Printf("TCP error: %s \n ", err)
 	}
 
 	fmt.Printf("%v", peer)
 
 	// Read Loop
-	msg := &Temp{}
-	//buf := make([]byte, 2048)
+	msg := &RPC{}
 	for {
-
-		if err := t.decoder.Decoder(conn, msg); err != nil {
+		if err := t.Decoder.Decode(conn, msg); err != nil {
 			fmt.Printf("TCP error: %s \n ", err)
+			continue
 		}
-
-		// data, err := conn.Read(buf)
-		// if err != nil {
-		// 	fmt.Println("read err")
-		// }
-		// msg := buf[:data]
 		fmt.Println(msg)
 	}
 }

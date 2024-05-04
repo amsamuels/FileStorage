@@ -1,21 +1,24 @@
 package main
 
 import (
-	"flag"
+	"CompleteStore/pkg"
 	"fmt"
 	"os"
 	"os/signal"
-	tcpserver "pdfparser/pkg"
 	"syscall"
 )
 
 func main() {
 
-	TcpPort := flag.Int("port", 8080, "The port to listen on; default is 8080.")
+	tcpOpts := pkg.TCPTransportOpts{
+		ListenAddr:    ":8080",
+		HandshakeFunc: pkg.NOPHandshakeFunc,
+		Decoder:       pkg.DefaultDecoder{},
+	}
 	quitChan := make(chan os.Signal, 1)
 	signal.Notify(quitChan, os.Interrupt, syscall.SIGTERM)
 
-	tcp := tcpserver.NewTcp(*TcpPort)
+	tcp := pkg.NewTcp(tcpOpts)
 	fmt.Println("starting ")
 	go func() {
 		tcp.Start()
