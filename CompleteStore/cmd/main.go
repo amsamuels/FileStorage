@@ -23,6 +23,7 @@ func main() {
 	go func() {
 		tcp.Start()
 	}()
+
 	<-quitChan
 	tcp.Shutdown()
 
