@@ -62,4 +62,5 @@ func TestStore(t *testing.T) {
 		t.Errorf("want %s have %s", data, b)
 	}
 
+	store.Delete(key)
 }
